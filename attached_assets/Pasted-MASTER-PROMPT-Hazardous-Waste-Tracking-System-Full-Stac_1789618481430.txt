@@ -1,0 +1,148 @@
+MASTER PROMPT — Hazardous Waste Tracking System (Full-Stack, Production-Grade)
+ROLE
+You are an autonomous senior full-stack software engineer, database architect, DevOps engineer, and security specialist with 25+ years of equivalent professional experience. You have full responsibility for planning, building, testing, debugging, containerizing, and preparing for deployment a complete, working, production-quality application — not a conceptual design, not documentation-only, not a UI mockup, not pseudo-code, and not a partial implementation.
+
+You are expected to behave like a senior engineer who owns this project end-to-end: you make sensible, well-justified engineering decisions wherever requirements are ambiguous or unspecified, and you do not stop to ask permission for routine implementation details. You only pause for human confirmation at the stage checkpoints defined below.
+
+Do not simply describe what you would build. Build it. Write real, complete, runnable code — actual files, actual schemas, actual configuration — at every stage.
+
+PROJECT DEFINITION
+Problem statement: Laboratories and industrial facilities need a digital system to track hazardous waste through its complete lifecycle — from generation and collection through transportation, treatment/disposal, and regulatory compliance documentation — replacing unreliable paper-based tracking with centralized visibility, traceability, and accountability.
+
+Outcome required: A centralized digital platform where every unit of hazardous waste has a unique, traceable record from creation to final disposal, with full audit history, role-based access, and compliance-support tooling.
+
+This is a compliance-SUPPORT and tracking system, not a legal compliance guarantee. Do not invent or hardcode jurisdiction-specific legal requirements and present them as universal. Design the compliance module so regulatory rules are configurable data, not hardcoded logic. State this distinction clearly in the README and anywhere compliance status is displayed.
+
+MANDATORY TECHNOLOGY STACK
+Frontend: React + TypeScript
+Backend: Node.js + Express.js, REST API
+Database: PostgreSQL
+Caching/Performance: Redis
+DevOps: Docker, Docker Compose, Git, GitHub
+Do not replace any of these unless there is a strong, specific technical reason you cannot work around. If you introduce any additional technology, library, or service beyond this stack, you must explicitly state what it is, why the mandatory stack alone is insufficient for that need, and what the tradeoffs are.
+
+STEP 1 — UNDERSTAND AND DEFINE BEFORE BUILDING
+Before writing any code, produce a concise engineering brief covering:
+
+Target users and real-world use cases
+Core business workflow and the complete hazardous waste lifecycle
+Functional and non-functional requirements
+User roles and what each role can/cannot do (design a role-based access control model; suggested roles: Admin, Lab/Industry Staff, Waste Manager, Transporter, Treatment/Disposal Facility, Compliance Officer — adjust if a better real-world structure emerges, and justify any change)
+Security requirements
+Data flow from user action → API → business logic → database/cache → response
+What "compliance support" means in this system, and its boundaries
+Authorization must be enforced server-side, at the middleware and query level, for every endpoint — never only by hiding UI elements.
+
+STEP 2 — SYSTEM DESIGN
+Design and document, before implementing:
+
+System architecture diagram (text/ASCII acceptable) showing the full request path: Client → REST API → Service layer → PostgreSQL ⇄ Redis → Document storage
+Backend layered architecture: routes → controllers → services → models/repositories, plus middleware/, validators/, utils/, config/, database/migrations, jobs/
+Frontend architecture: feature-based organization (features/waste, features/auth, features/dashboard, features/compliance, etc.), shared components/, typed api/ client layer, types/ mirroring backend DTOs
+Complete normalized PostgreSQL schema (entities should include at minimum: organizations, users, waste_categories, waste_records, collection_records, transporters, vehicles, transport_assignments, facilities, disposal_records, documents, status_history, audit_logs, and — from Phase 2 onward — compliance_records and notifications). Include primary keys, foreign keys, constraints, ENUM/status types, indexes on frequently queried columns, timestamps, and a soft-deletion strategy (deleted_at) for records that must remain auditable.
+REST API contract: for every endpoint define method, path, auth requirement, role requirement, request body, query params, response shape, status codes, and error cases. Frontend and backend must use this same contract — no drift.
+Redis usage: identify concrete use cases only (e.g., dashboard KPI caching, session/token data if applicable, rate limiting, temporary workflow state). For each, specify what is cached, TTL, invalidation strategy, and documented fallback behavior if Redis is unavailable (the system must degrade gracefully, never fail outright).
+Docker architecture: services for frontend, backend, PostgreSQL, Redis, connected via a Docker Compose network, with persistent volumes for Postgres data and document storage, and environment-variable-driven configuration throughout.
+STEP 3 — THE WASTE LIFECYCLE (CORE DOMAIN MODEL)
+Implement a status-driven lifecycle, with every waste record carrying a unique, immutable tracking ID (e.g. WR-2026-000123):
+
+draft → registered → collected → in_storage → assigned_transport
+     → in_transit → delivered → in_treatment → disposed → completed
+Every status transition must be written as a new row in a status_history table (never overwritten), attributed to the user who made the change, with a timestamp. A separate audit_logs table (JSONB details column) must capture broader entity-level actions (create/update/status_change) for security and compliance review — keep these two logs conceptually distinct: status_history powers the lifecycle timeline UI, audit_logs powers the security/compliance audit trail.
+
+STEP 4 — BUILD THE ACTUAL BACKEND
+Implement real, working Node.js + Express.js REST APIs, not stubs. Required:
+
+JWT-based authentication (with password hashing via bcrypt or equivalent); define an access/refresh token strategy if you judge it warranted, and justify the choice
+Role-based authorization middleware, enforced on every protected route
+Input validation on every endpoint (e.g. zod or joi) — reject invalid input before it reaches business logic
+Centralized error handling middleware with consistent error response shapes
+Structured logging
+Redis integration for the use cases you defined in Step 2
+Pagination, filtering, sorting, and search on list endpoints (especially waste records)
+Audit logging triggered from the service layer, not scattered across controllers
+Strict separation of concerns: controllers stay thin (parse request → call service → shape response); all business logic lives in services; all data access lives in models/repositories
+Cover, at minimum, these API resource groups: auth, users, waste records, collection, transportation, disposal/treatment, facilities, compliance, documents, dashboard/analytics, notifications, audit logs.
+
+STEP 5 — BUILD THE ACTUAL FRONTEND
+Implement a real React + TypeScript application — not a wireframe, not placeholder screens. Required pages/modules:
+
+Login, Dashboard, Waste Registration, Waste Records (list, search, filter, paginate), Waste Details (lifecycle timeline view), Collection Management, Transportation Tracking, Disposal/Treatment, Compliance, Documents, Notifications, User Management, Audit Logs, Reports.
+
+The UI must be professional, clean, responsive (desktop and tablet), and visually consistent across pages — this must read as a real enterprise operations tool, not a generic student CRUD scaffold. The dashboard must be driven by real data from the database via the API (through Redis where cached) — never hardcoded or fake numbers. Include meaningful KPIs: total waste generated, pending collection, in transit, pending disposal, completed disposal, compliance status, overdue records, recent activity.
+
+STEP 6 — SECURITY (NON-NEGOTIABLE)
+Password hashing (bcrypt/argon2), never plaintext or reversible encryption
+JWT or another justified secure auth mechanism, with sensible expiry
+Role-based authorization enforced server-side on every route
+Input validation and sanitization everywhere
+Rate limiting (Redis-backed is acceptable and preferred)
+Correct CORS configuration
+Secure HTTP headers (helmet or equivalent)
+Parameterized queries only — no string-concatenated SQL, ever
+Secure file upload handling (type/size validation, safe storage paths, no path traversal)
+All secrets and credentials via environment variables, never hardcoded, never committed
+Consistent, non-leaky error responses (no stack traces or internal details returned to clients)
+STEP 7 — DOCUMENTS, COMPLIANCE, NOTIFICATIONS, AUDIT
+Documents: support manifests, transport documents, disposal certificates, and compliance documents. For the initial version, store files on a Docker-mounted volume with metadata (type, uploader, timestamp, associated waste record) in PostgreSQL. Design this so migration to S3-compatible object storage later is a config change, not a rewrite. Enforce file-type/size validation and access control on retrieval.
+Compliance module: checklist-style tracking of required documents/steps per waste record, expiry tracking, missing-item detection, overdue flags — all driven by configurable rules, not hardcoded legal text. Make the "this is not a legal compliance guarantee" boundary explicit in the UI and docs.
+Notifications: keep the first implementation practical — in-app notifications for events like pending collection, delayed transport, pending disposal, expiring compliance documents, overdue workflow steps. Do not over-engineer this in the MVP.
+Audit trail: every significant state change must be reconstructable as "User X changed Record Y from state A to state B at time T, with these details." Protect audit data from modification through the normal application API (append-only from the application's perspective).
+STEP 8 — TESTING
+Write and run real tests, not descriptions of tests:
+
+Backend unit tests (services, validators, utility functions)
+API/integration tests (auth flows, RBAC enforcement, core waste-lifecycle endpoints)
+Database-level tests where meaningful (constraints, cascade behavior)
+Critical frontend tests (key user flows: login, waste registration, status transition)
+When a test fails, diagnose and fix the root cause yourself, re-run, and confirm the fix — do not just report the failure and stop.
+
+STEP 9 — DOCKER & GITHUB
+Dockerfiles for frontend and backend
+docker-compose.yml wiring frontend, backend, PostgreSQL, Redis, with correct networking, health checks, and persistent volumes for Postgres and document storage
+The full stack must run with a single command: docker compose up --build
+Verify inter-service communication actually works before declaring this step done
+GitHub-ready repo structure: README.md, .gitignore, .env.example (no real secrets, ever), /docs with ERD, API spec, and roadmap
+Recommend a clean, logical commit strategy as you build (one coherent unit of work per commit)
+STEP 10 — CI/CD & DEPLOYMENT
+A GitHub Actions workflow that installs dependencies, lints, runs tests, builds frontend and backend, and builds Docker images, failing loudly on any error
+A practical, realistic deployment architecture (student/small-project budget, not enterprise-scale infrastructure) covering frontend hosting, backend hosting, managed PostgreSQL, managed Redis, and how Docker images move from GitHub to that environment
+Concrete deployment steps and commands, environment variable handling per environment (development/testing/production), and database migration handling
+Explain the full path: Development → GitHub → CI build/test → Docker image → Deployment → Verification
+AUTONOMOUS DEBUGGING BEHAVIOR
+When you hit an error at any stage:
+
+Identify the root cause (inspect the actual relevant files/logs — don't guess)
+Fix it
+Re-run the affected test/build
+Verify the fix actually resolved it
+Continue — do not stop and ask the human to debug something you can reasonably diagnose yourself
+Continuously enforce consistency across the whole stack: frontend calls must match real backend routes; backend queries must match the real database schema; Docker config must match the real project structure; environment variables referenced in code must exist in .env.example. Never reference a file, package, column, or endpoint that doesn't actually exist in the project.
+
+MVP-FIRST DISCIPLINE
+Build in this order and do not skip ahead:
+
+MVP: Auth + core roles, full waste lifecycle (registration → collection → transport → disposal → completed) with status history, basic audit logging, basic document upload (local volume + Postgres metadata), dashboard with real KPIs, search/filter/pagination, full Docker Compose setup.
+
+Phase 2: Full compliance checklist module, notifications, reporting/exports, Redis-backed dashboard caching, rate limiting, refined RBAC edge cases.
+
+Phase 3: Background jobs (expiry reminders), CI/CD pipeline, S3-compatible storage migration path, advanced analytics, multi-jurisdiction compliance configuration.
+
+Do not build Phase 2 or 3 features before the MVP is fully working end-to-end.
+
+WORK IN STAGES — HUMAN CHECKPOINTS
+Work through this project in clearly numbered stages (e.g., Stage 1: Architecture + DB schema; Stage 2: Backend core + auth; Stage 3: Waste lifecycle APIs; Stage 4: Frontend core + auth UI; Stage 5: Waste lifecycle UI; Stage 6: Redis + dashboard; Stage 7: Docker; Stage 8: Testing; Stage 9: Compliance/notifications; Stage 10: CI/CD + deployment prep).
+
+For each stage: briefly state what you're about to implement, implement it completely, test/verify it actually works, report what was completed and any decisions you made, then proceed to the next stage. Pause for explicit human confirmation only between major stages — not after every individual file or command.
+
+FINAL QUALITY CHECK
+Before declaring the project complete, verify explicitly:
+
+Frontend runs · Backend runs · APIs work end-to-end · Database schema matches queries · Redis works and degrades gracefully if unavailable · Authentication works · Authorization is enforced server-side for every role · Full waste lifecycle works start-to-finish · Compliance module works · Audit logs are being written correctly · docker compose up --build works cleanly · Tests pass · Production build succeeds · Environment variables are consistent and documented · No secrets are hardcoded or committed · GitHub repo structure is clean and professional · Deployment steps are accurate and verified where possible.
+
+OUTPUT EXPECTATIONS
+Produce real, complete, working code at every stage — never pseudo-code where real code is required.
+Clearly list every package/library that must be installed, and why.
+Do not introduce microservices, GraphQL, NoSQL, or other architectural detours unless the mandatory stack genuinely cannot solve the problem — and if you do, justify it explicitly.
+Keep the system understandable: this should read as a well-engineered mid-sized application, not an over-abstracted enterprise framework.
+Begin now with Stage 1: System architecture, complete PostgreSQL schema, and project folder structure — implement it fully, then report back before continuing to Stage 2.

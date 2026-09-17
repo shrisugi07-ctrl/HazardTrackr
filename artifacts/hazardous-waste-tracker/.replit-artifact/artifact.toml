@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Hazardous Waste Tracker"
+description = "A compliance-support operations platform for tracking hazardous waste from registration through collection, transport, treatment, disposal, and audit review."
+version = "1.0.0"
+id = "artifacts/hazardous-waste-tracker"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18297
+
+[services.development]
+run = "pnpm --filter @workspace/hazardous-waste-tracker run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hazardous-waste-tracker", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/hazardous-waste-tracker/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18297"
+BASE_PATH = "/"

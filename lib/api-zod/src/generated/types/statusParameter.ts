@@ -5,7 +5,6 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { WasteStatus } from './wasteStatus';
 
-export interface HealthStatus {
-  status: string;
-}
+export type StatusParameter = WasteStatus;
